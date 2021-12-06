@@ -1,6 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdbool.h>
 #include "asn5.h"
+
+typedef int buffer_item;
+
 void* producer(void* param){
     buffer_item item;
     while (true){
