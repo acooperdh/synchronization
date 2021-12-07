@@ -41,17 +41,6 @@ buffer_item buffer[BUFFER_SIZE];
 // when an item is inserted, in is moved one forward so that the next item knows where to go 
 // if in == buffer size no more items can be inserted 
 
-void set_counters(){
-    if (in < BUFFER_SIZE && out < BUFFER_SIZE) return;
-    if (in == BUFFER_SIZE){
-        for(int i = 0; i < BUFFER_SIZE; i++){
-            if (buffer[i] == -1){
-                in = i;
-                break;
-            }
-        }
-    } 
-}
 
 void insert_item(int num){
     printf("inserting item %d\n", num);
@@ -94,18 +83,21 @@ while(true){
 */
 void* producer(){
     buffer_item item;
-    sem_wait(&empty);
-    pthread_mutex_lock(&mutex);
-    // sleep for a random period of time: 0 - 4 seconds 
-    int time = rand() % 4;
-    sleep(time);
-    // generate a random number 
-    item = rand();
-    // insert an item 
-    insert_item(item);
-    
-    pthread_mutex_unlock(&mutex);
-    sem_wait(&full);
+    while(true){
+        sem_wait(&empty);
+        pthread_mutex_lock(&mutex);
+        // sleep for a random period of time: 0 - 4 seconds 
+        int time = rand() % 4;
+        sleep(time);
+        // generate a random number 
+        item = rand();
+        // insert an item 
+        insert_item(item);
+
+        pthread_mutex_unlock(&mutex);
+        sem_wait(&full);
+        break;
+    }
 }
 
 void* consumer(void* param){
@@ -120,6 +112,7 @@ void* consumer(void* param){
         // release mutex & semaphore
         pthread_mutex_unlock(&mutex);
         sem_wait(&empty);
+        break;
     }
         
 }
@@ -137,6 +130,7 @@ int main(int argc, char *argv[]){
     // init semaphore
     sem_init(&full, 1, 0);
     sem_init(&empty, 1, BUFFER_SIZE);
+    printf("made it here 1\n");
     // init buffer
     for(int i = 0; i < BUFFER_SIZE; i++){
         buffer[i] = -1;
@@ -145,18 +139,18 @@ int main(int argc, char *argv[]){
     // creating producer threads 
     pthread_t producers[num_producers];
     for(int i = 0; i < num_producers; i++){
-        pthread_t t;
-        producers[i] = pthread_create(&t, NULL, producer, NULL);
+        pthread_create(&producers[i], NULL, producer, NULL);
         int temp = rand() % 4;
+        sleep(temp);
     }
     //creating consumer threads 
     pthread_t consumers[num_consumers];
     for(int i = 0; i < num_consumers; i++){
-        pthread_t t;
-        consumers[i] = pthread_create(&t, NULL, consumer, NULL);
+        pthread_create(&consumers[i], NULL, consumer, NULL);
         int temp = rand() % 4;
+        sleep(temp);
     }
-
+    printf("made it here\n");
     int total_threads = num_consumers + num_producers;
     for(int i = 0; i < total_threads; i++){
         if (i < num_consumers){
@@ -169,7 +163,6 @@ int main(int argc, char *argv[]){
             break;
         }
     }
-
     /*
     1. get command line args argv[1], argv[2], argv[3]
     2. init semaphores and mutex lock
