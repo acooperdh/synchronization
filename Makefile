@@ -1,4 +1,5 @@
-main: asn5.c asn5.h
-	gcc -o asn5 asn5.c -lpthread -lrt
+main: new_asn5.c
+	gcc -o pls_work new_asn5.c -lpthread -lrt
+	./pls_work 2 1 5
 clean: 
-	rm asn5
+	rm new_asn5

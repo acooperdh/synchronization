@@ -26,33 +26,54 @@ typedef struct voidptr{
 	int index;
 } ThreadParam;
 
+int update_position(int pos){
+	int temp = pos += 1;
+	return (pos % BUFFER_SIZE);
+}
+
 void* producer(void* index){
 	buffer_item item;
-	for(int i = 0; i < numProducers; i++){
+	while(true){
+		// sleep
+		sleep(rand() % 4);
 		ThreadParam* temp_ptr = (ThreadParam*)index;
 		int ind = temp_ptr->index;
+		// generate random number
 		item = rand();
+		//request access
 		sem_wait(&empty);
 		pthread_mutex_lock(&mutex);
+		// critical section
 		buffer[in] = item;
 		printf("Producer %d inserted item %d into buffer[%d]\n", ind, item, in);
-		in = (in+1)%BUFFER_SIZE;
+		in = (in+1) % BUFFER_SIZE;
+		// release access
 		pthread_mutex_unlock(&mutex);
 		sem_post(&full);
+		// remainder code
 	}
 }
 
 void* consumer(void* index){
-	for(int i = 0; i < numConsumers; i++){
+	while(true){
+		// sleep
+		sleep(rand() % 4);
 		ThreadParam* temp_ptr = (ThreadParam*)index;
 		int ind = temp_ptr->index;
+
+		// request access
 		sem_wait(&full);
 		pthread_mutex_lock(&mutex);
+		// critical section
 		buffer_item item = buffer[out];
+		buffer[out] = -1;
 		printf("Consumer %d removed item %d from buffer[%d]\n", ind, item, out);
-		out = (out+1)%BUFFER_SIZE;
+		buffer[out] = -1;
+		out = (out + 1) % BUFFER_SIZE;
+		//release access
 		pthread_mutex_unlock(&mutex);
 		sem_post(&empty);
+		// remainder code
 	}
 }
 
@@ -77,14 +98,9 @@ int main(int argc, char *argv[]){
 		pthread_create(&consumers[i], NULL, consumer, p);
 	}
 
-	for(int i = 0; i < numProducers; i++){
-		pthread_join(producers[i], NULL);
-	}
-	for(int i = 0; i < numConsumers; i++){
-		pthread_join(consumers[i], NULL);
-	}
-	pthread_mutex_destroy(&mutex);
-	sem_destroy(&empty);
-	sem_destroy(&full);
+	// pthread_mutex_destroy(&mutex);
+	// sem_destroy(&empty);
+	// sem_destroy(&full);
+	sleep(sleepTime);
 	return 0;
 }
