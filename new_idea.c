@@ -2,7 +2,7 @@
 #include <semaphore.h>
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <unistd.h>
 /*
 This program provides a possible solution for producer-consumer problem using mutex and semaphore.
 I have used 5 producers and 5 consumers to demonstrate the solution. You can always play with these values.
@@ -52,9 +52,10 @@ int main()
     pthread_mutex_init(&mutex, NULL);
     sem_init(&empty,0,BufferSize);
     sem_init(&full,0,0);
-
+    printf("here we go !!! sleeping for ...\n");
+    sleep(rand() % 4);
     int a[5] = {1,2,3,4,5}; //Just used for numbering the producer and consumer
-
+    printf("I have awoken!\n");
     for(int i = 0; i < 5; i++) {
         pthread_create(&pro[i], NULL, (void *)producer, (void *)&a[i]);
     }

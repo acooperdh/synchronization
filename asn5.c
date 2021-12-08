@@ -22,8 +22,13 @@ int in = 0;
 int out = 0;
 
 // init buffer
-buffer_item buffer[BUFFER_SIZE];
+int buffer[BUFFER_SIZE];
 
+
+int update_position(int pos){
+    pos+=1;
+    return (pos % BUFFER_SIZE);
+}
 // inserts an item into the array at the first possible spot 
 // when an item is inserted, in is moved one forward so that the next item knows where to go 
 // if in == buffer size no more items can be inserted 
@@ -31,22 +36,15 @@ buffer_item buffer[BUFFER_SIZE];
 void insert_item(int num, int index){
     buffer[in] = num;
     printf("Producer %d put %d at %d\n", index, num, in);
-    in = (in++)%BUFFER_SIZE;
+    update_position(in);
 }
 // removes item from the array starting at 0 and working its way to the end 
 // when item removed, out should be changed to the index of the earliest item
-void remove_item(){
-    printf("removing the earliest item in the buffer\n");
-    for(int i = 0; i < BUFFER_SIZE; i++){
-        if (buffer[i] != -1){
-            int num = buffer[i];
-            buffer[i] = -1;
-            printf("%d removed at %d\n", num, i);
-            return;
-        }
-    }
-    printf("was unable to remove because the buffer is empty\n");
-    return;
+void remove_item(void* index_ptr){
+    int element = buffer[out];
+    buffer[out] = -1;
+    printf("Consumer %d remove %d at %d\n", *((int *)index_ptr), element, out);
+    update_position(out);
 }
 
 /*
@@ -60,38 +58,36 @@ while(true){
 }
 */
 void* producer(void *index){
+    int ind = *((int*)index);
     while(1){
         buffer_item item;
         sem_wait(&empty);
         pthread_mutex_lock(&mutex);
         // sleep for a random period of time: 0 - 4 seconds 
-        int time = rand() % 4;
-        sleep(time);
+        sleep(rand()%4);
         // generate a random number 
         item = rand();
         // insert an item 
-        insert_item(item, *(int*)index);
+        insert_item(item, ind);
         pthread_mutex_unlock(&mutex);
         sem_wait(&full);
     }
 }
-// need to adjust remove item to work with index being passed in and to print the proper statement 
-// think should be finished tomorrow morning 
-void* consumer(void* param){
-        // request semaphore and mutex
-        while(true){
-            sem_wait(&full);
-            pthread_mutex_lock(&mutex);
-            // sleep for random period of time 
-            sleep(rand() % 4);
-            // remove item
-            remove_item(*(int*)param);
-            // release mutex & semaphore
-            pthread_mutex_unlock(&mutex);
-            sem_wait(&empty);
-            break;
+// consumer function
+void* consumer(void* index){
+    // request semaphore and mutex
+    while(1){
+        sem_wait(&full);
+        pthread_mutex_lock(&mutex);
+        // sleep for random period of time 
+        sleep(rand() % 4);
+        // remove item
+        remove_item(index);
+        // release mutex & semaphore
+        pthread_mutex_unlock(&mutex);
+        sem_wait(&empty);
+        break;
     }
-        
 }
 
 int main(int argc, char *argv[]){
@@ -103,11 +99,10 @@ int main(int argc, char *argv[]){
     int out; // indicate the earliest item in the buffer
     // init mutex 
     pthread_mutex_init(&mutex, NULL);
-
+    printf("making it here");
     // init semaphore
-    sem_init(&full, 1, 0);
-    sem_init(&empty, 1, BUFFER_SIZE);
-    printf("made it here 1\n");
+    sem_init(&full, 0, 0);
+    sem_init(&empty, 0, BUFFER_SIZE);
     // init buffer
     for(int i = 0; i < BUFFER_SIZE; i++){
         buffer[i] = -1;
@@ -116,38 +111,21 @@ int main(int argc, char *argv[]){
     // creating producer threads 
     pthread_t producers[num_producers];
     for(int i = 0; i < num_producers; i++){
-        pthread_create(&producers[i], NULL, producer, NULL);
-        int temp = rand() % 4;
-        sleep(temp);
+        pthread_create(&producers[i], NULL, producer, (void*)&i);
+        sleep(2);
     }
     //creating consumer threads 
     pthread_t consumers[num_consumers];
     for(int i = 0; i < num_consumers; i++){
         pthread_create(&consumers[i], NULL, consumer, NULL);
-        int temp = rand() % 4;
-        sleep(temp);
+        sleep(2);
     }
-    printf("made it here\n");
-    int total_threads = num_consumers + num_producers;
-    for(int i = 0; i < total_threads; i++){
-        if (i < num_consumers){
-            pthread_join(consumers[i], NULL);
-        }
-        if (i < num_producers){
-            pthread_join(producers[i], NULL);
-        }
-        if (i >= num_producers && i >= num_consumers){
-            break;
-        }
+    for(int i = 0; i < num_producers; i++){
+        pthread_join(producers[i], NULL);
     }
-    /*
-    1. get command line args argv[1], argv[2], argv[3]
-    2. init semaphores and mutex lock
-    3. init buffer
-    4. create producer thread(s)
-    5. create consumer thread(s)
-    6. sleep and thereafter terminate the C program
-    */
+    for(int i = 0; i < num_consumers; i++){
+        pthread_join(consumers[i], NULL);
+    }
 
     pthread_mutex_destroy(&mutex);
     sem_destroy(&full);
