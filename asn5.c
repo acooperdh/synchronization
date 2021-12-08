@@ -8,19 +8,6 @@
 
 #define BUFFER_SIZE 5
 
-/* Notes: 
-1. producers and consumers running as different threads, move items to
-and from the buffer 
-2. like in Chapter 7, we are using empty, full (both semaphores) and 
-mutex. 
-    Therefore 2 unnamed semaphores & 1 mutex lock instead of a binary 
-    semaphores 
-
-
-
-
-
-*/
 // global variables
 typedef int buffer_item;
 
@@ -41,20 +28,11 @@ buffer_item buffer[BUFFER_SIZE];
 // when an item is inserted, in is moved one forward so that the next item knows where to go 
 // if in == buffer size no more items can be inserted 
 
-
-void insert_item(int num){
-    printf("inserting item %d\n", num);
-    for(int i = 0; i < BUFFER_SIZE; i++){
-        if (buffer[i] == -1){
-            buffer[i] = num;
-            printf("%d inserted at %d\n", num, i);
-            return;
-        }
-    }
-    printf("was unable to insert %d\n",num);
-    return;
+void insert_item(int num, int index){
+    buffer[in] = num;
+    printf("Producer %d put %d at %d\n", index, num, in);
+    in = (in++)%BUFFER_SIZE;
 }
-
 // removes item from the array starting at 0 and working its way to the end 
 // when item removed, out should be changed to the index of the earliest item
 void remove_item(){
@@ -81,9 +59,9 @@ while(true){
     // remainder section 
 }
 */
-void* producer(){
-    buffer_item item;
-    while(true){
+void* producer(void *index){
+    while(1){
+        buffer_item item;
         sem_wait(&empty);
         pthread_mutex_lock(&mutex);
         // sleep for a random period of time: 0 - 4 seconds 
@@ -92,27 +70,26 @@ void* producer(){
         // generate a random number 
         item = rand();
         // insert an item 
-        insert_item(item);
-
+        insert_item(item, *(int*)index);
         pthread_mutex_unlock(&mutex);
         sem_wait(&full);
-        break;
     }
 }
-
+// need to adjust remove item to work with index being passed in and to print the proper statement 
+// think should be finished tomorrow morning 
 void* consumer(void* param){
         // request semaphore and mutex
         while(true){
             sem_wait(&full);
-        pthread_mutex_lock(&mutex);
-        // sleep for random period of time 
-        sleep(1);
-        // remove item
-        remove_item();
-        // release mutex & semaphore
-        pthread_mutex_unlock(&mutex);
-        sem_wait(&empty);
-        break;
+            pthread_mutex_lock(&mutex);
+            // sleep for random period of time 
+            sleep(rand() % 4);
+            // remove item
+            remove_item(*(int*)param);
+            // release mutex & semaphore
+            pthread_mutex_unlock(&mutex);
+            sem_wait(&empty);
+            break;
     }
         
 }
