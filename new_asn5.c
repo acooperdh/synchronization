@@ -19,16 +19,23 @@ int out = 0;
 
 int buffer[BUFFER_SIZE];
 
-int numProducers = 3;
-int numConsumers = 3;
+int numProducers = 0;
+int numConsumers = 0;
+
+typedef struct voidptr{
+	int index;
+} ThreadParam;
+
 void* producer(void* index){
 	buffer_item item;
 	for(int i = 0; i < numProducers; i++){
+		ThreadParam* temp_ptr = (ThreadParam*)index;
+		int ind = temp_ptr->index;
 		item = rand();
 		sem_wait(&empty);
 		pthread_mutex_lock(&mutex);
 		buffer[in] = item;
-		printf("producer did a thing %d\n", item);
+		printf("Producer %d inserted item %d into buffer[%d]\n", ind, item, in);
 		in = (in+1)%BUFFER_SIZE;
 		pthread_mutex_unlock(&mutex);
 		sem_post(&full);
@@ -37,27 +44,37 @@ void* producer(void* index){
 
 void* consumer(void* index){
 	for(int i = 0; i < numConsumers; i++){
+		ThreadParam* temp_ptr = (ThreadParam*)index;
+		int ind = temp_ptr->index;
 		sem_wait(&full);
 		pthread_mutex_lock(&mutex);
 		buffer_item item = buffer[out];
-		printf("consumer did a thing %d\n", item);
+		printf("Consumer %d removed item %d from buffer[%d]\n", ind, item, out);
 		out = (out+1)%BUFFER_SIZE;
 		pthread_mutex_unlock(&mutex);
 		sem_post(&empty);
 	}
 }
 
-int main(){
+int main(int argc, char *argv[]){
 	pthread_t producers[numProducers];
 	pthread_t consumers[numConsumers];
 	sem_init(&full, 0, 0);
 	sem_init(&empty, 0, BUFFER_SIZE);
-	sleep(rand() % 10);
+
+	if (argc != 4) return 1;
+	int sleepTime = atoi(argv[1]);
+	numProducers = atoi(argv[2]);
+	numConsumers = atoi(argv[3]);
 	for(int i = 0; i < numProducers; i++){
-		pthread_create(&producers[i], NULL, producer, (void *)&i);
+		ThreadParam* p = malloc(sizeof(int)*2);
+		p->index = i;
+		pthread_create(&producers[i], NULL, producer, p);
 	}
 	for(int i = 0; i < numConsumers; i++){
-		pthread_create(&consumers[i], NULL, consumer, (void *)&i);
+		ThreadParam* p = malloc(sizeof(int)*2);
+		p->index = i;
+		pthread_create(&consumers[i], NULL, consumer, p);
 	}
 
 	for(int i = 0; i < numProducers; i++){
@@ -66,10 +83,8 @@ int main(){
 	for(int i = 0; i < numConsumers; i++){
 		pthread_join(consumers[i], NULL);
 	}
-
 	pthread_mutex_destroy(&mutex);
 	sem_destroy(&empty);
 	sem_destroy(&full);
-
 	return 0;
 }
