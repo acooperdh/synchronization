@@ -62,13 +62,9 @@ void* producer(void* index){
 		pthread_mutex_lock(&mutex);
 		// critical section
 		insert_item(ind, item);
-		// buffer[in] = item;
-		// printf("Producer %d inserted item %d into buffer[%d]\n", ind, item, in);
-		// in = update_position(in);
 		// release access
 		pthread_mutex_unlock(&mutex);
 		sem_post(&full);
-		// remainder code
 	}
 }
 
@@ -83,14 +79,9 @@ void* consumer(void* index){
 		pthread_mutex_lock(&mutex);
 		// critical section
 		remove_item(ind);
-		// buffer_item item = buffer[out];
-		// printf("Consumer %d removed item %d from buffer[%d]\n", ind, item, out);
-		// buffer[out] = -1;
-		// out = update_position(out);
 		//release access
 		pthread_mutex_unlock(&mutex);
 		sem_post(&empty);
-		// remainder code
 	}
 }
 
