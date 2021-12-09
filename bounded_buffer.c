@@ -9,8 +9,15 @@
 
 #define BUFFER_SIZE 5
 
+// defining custom structs & variable types 
 typedef int buffer_item;
 
+// used to store the index of a thread
+typedef struct thread_param{
+	int index;
+} ThreadParam;
+
+// global variables 
 pthread_mutex_t mutex;
 
 sem_t full;
@@ -25,16 +32,13 @@ int numProducers = 0;
 int numConsumers = 0;
 int sleepTime = 0;
 
-// used to store the index of a thread
-typedef struct thread_param{
-	int index;
-} ThreadParam;
-
+// updates the in / out values used to insert and remove elements from the buffer
 int update_position(int pos){
 	int temp = pos += 1;
 	return (pos % BUFFER_SIZE);
 }
 
+// inserts a random number into the buffer at the next free position
 void insert_item(int index, buffer_item item){
 	buffer[in] = item;
 	printf("Producer %d inserted item %d into buffer[%d]\n", index, item, in);
@@ -42,6 +46,7 @@ void insert_item(int index, buffer_item item){
 	return;
 }
 
+// removes the next element from the buffer
 void remove_item(int index){
 	buffer_item item = buffer[out];
 	printf("Consumer %d removed item %d from buffer[%d]\n", index, item, out);
@@ -88,13 +93,19 @@ void* consumer(void* index){
 }
 
 int main(int argc, char *argv[]){
+	// initialze thread arrays
 	pthread_t producers[numProducers];
 	pthread_t consumers[numConsumers];
 
+	// initializing mutex and semaphores
 	pthread_mutex_init(&mutex, NULL);
 	sem_init(&full, 0, 0);
 	sem_init(&empty, 0, BUFFER_SIZE);
+
+	// used to ensure generated random numbers are unique
 	srand(time(NULL));
+
+	// if there is not enough parameters given, the program will exit
 	if (argc != 4) return 1;
 	sleepTime = atoi(argv[1]);
 	numProducers = atoi(argv[2]);
