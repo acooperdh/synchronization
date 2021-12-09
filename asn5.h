@@ -1,6 +1,8 @@
-#define __ASN5_HEADER
-#ifndef __ASN5_HEADER
+#define NEW_ASN5_HEADER
+#ifndef NEW_ASN5_HEADER
 
-typedef int buffer_item;
+typedef struct thread_param{
+    int index;
+} ThreadParam;
 
 #endif

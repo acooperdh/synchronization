@@ -21,8 +21,10 @@ int buffer[BUFFER_SIZE];
 
 int numProducers = 0;
 int numConsumers = 0;
+int sleepTime = 0;
 
-typedef struct voidptr{
+// used to store the index of a thread
+typedef struct thread_param{
 	int index;
 } ThreadParam;
 
@@ -31,9 +33,24 @@ int update_position(int pos){
 	return (pos % BUFFER_SIZE);
 }
 
+void insert_item(int index, buffer_item item){
+	buffer[in] = item;
+	printf("Producer %d inserted item %d into buffer[%d]\n", index, item, in);
+	in = update_position(in);
+	return;
+}
+
+void remove_item(int index){
+	buffer_item item = buffer[out];
+	printf("Consumer %d removed item %d from buffer[%d]\n", index, item, out);
+	buffer[out] = -1;
+	out = update_position(out);
+	return;
+}
+
 void* producer(void* index){
 	buffer_item item;
-	while(true){
+	while(1){
 		// sleep
 		sleep(rand() % 4);
 		ThreadParam* temp_ptr = (ThreadParam*)index;
@@ -44,9 +61,10 @@ void* producer(void* index){
 		sem_wait(&empty);
 		pthread_mutex_lock(&mutex);
 		// critical section
-		buffer[in] = item;
-		printf("Producer %d inserted item %d into buffer[%d]\n", ind, item, in);
-		in = (in+1) % BUFFER_SIZE;
+		insert_item(ind, item);
+		// buffer[in] = item;
+		// printf("Producer %d inserted item %d into buffer[%d]\n", ind, item, in);
+		// in = update_position(in);
 		// release access
 		pthread_mutex_unlock(&mutex);
 		sem_post(&full);
@@ -55,21 +73,20 @@ void* producer(void* index){
 }
 
 void* consumer(void* index){
-	while(true){
+	while(1){
 		// sleep
 		sleep(rand() % 4);
 		ThreadParam* temp_ptr = (ThreadParam*)index;
 		int ind = temp_ptr->index;
-
 		// request access
 		sem_wait(&full);
 		pthread_mutex_lock(&mutex);
 		// critical section
-		buffer_item item = buffer[out];
-		buffer[out] = -1;
-		printf("Consumer %d removed item %d from buffer[%d]\n", ind, item, out);
-		buffer[out] = -1;
-		out = (out + 1) % BUFFER_SIZE;
+		remove_item(ind);
+		// buffer_item item = buffer[out];
+		// printf("Consumer %d removed item %d from buffer[%d]\n", ind, item, out);
+		// buffer[out] = -1;
+		// out = update_position(out);
 		//release access
 		pthread_mutex_unlock(&mutex);
 		sem_post(&empty);
@@ -80,27 +97,36 @@ void* consumer(void* index){
 int main(int argc, char *argv[]){
 	pthread_t producers[numProducers];
 	pthread_t consumers[numConsumers];
+
+	pthread_mutex_init(&mutex, NULL);
 	sem_init(&full, 0, 0);
 	sem_init(&empty, 0, BUFFER_SIZE);
-
+	srand(time(NULL));
 	if (argc != 4) return 1;
-	int sleepTime = atoi(argv[1]);
+	sleepTime = atoi(argv[1]);
 	numProducers = atoi(argv[2]);
 	numConsumers = atoi(argv[3]);
+
+	// creating producer threads
 	for(int i = 0; i < numProducers; i++){
 		ThreadParam* p = malloc(sizeof(int)*2);
 		p->index = i;
 		pthread_create(&producers[i], NULL, producer, p);
 	}
-	for(int i = 0; i < numConsumers; i++){
+
+	// creating consumer threads
+	for(int x = 0; x < numConsumers; x++){
 		ThreadParam* p = malloc(sizeof(int)*2);
-		p->index = i;
-		pthread_create(&consumers[i], NULL, consumer, p);
+		p->index = x;
+		pthread_create(&consumers[x], NULL, consumer, p);
 	}
 
-	// pthread_mutex_destroy(&mutex);
-	// sem_destroy(&empty);
-	// sem_destroy(&full);
+	// sleep to allow the threads to run 
 	sleep(sleepTime);
+
+	// destroying mutex and semaphores before terminating the program 
+	pthread_mutex_destroy(&mutex);
+	sem_destroy(&empty);
+	sem_destroy(&full);
 	return 0;
 }
