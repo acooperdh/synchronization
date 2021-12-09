@@ -1,3 +1,5 @@
+// Drew Cooper B00811386 CSCI 3120 Assignment 5 - Synchronization
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>

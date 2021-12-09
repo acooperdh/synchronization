@@ -1,4 +1,4 @@
-main: new_asn5.c asn5.h
-	gcc -o pls_work new_asn5.c -lpthread -lrt
+main: bounded_buffer.c
+	gcc -o BoundedBuffer bounded_buffer.c -lpthread -lrt
 clean: 
-	rm pls_work
+	rm BoundedBuffer
